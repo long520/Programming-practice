@@ -13,6 +13,7 @@ _cache[1024 * 1024];
 int
 main(int argc, char *argv[])
 {
+	printf("create\n");
 	pstMEM mem = MEM_create(_cache, sizeof(_cache));
 	if(mem == NULL)
 	{
@@ -21,16 +22,15 @@ main(int argc, char *argv[])
 	}
 	
 	char *str = "abc";
-	char a[10] = "qwer";
 	if(NULL != mem)
 	{
-		void *ptr = mem->alloc(mem, 1024);
-		ptr = a;
-		printf("a = [%s]\n",(char *)ptr);
-		mem->strdup(mem, str);
+		void *ptr = (void *)mem->alloc(mem, 1024);
 		
+		printf("strdup\n");
+		mem->strdup(mem, (char *)str);
+		
+		printf("free\n");
 		mem->free(mem, ptr);
-		ptr = NULL;
 		
 	}
 	

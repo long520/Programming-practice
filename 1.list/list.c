@@ -34,27 +34,27 @@ list_insert(struct tagLIST *const list, const char *str)
 		return -1;
 	}
 	
-	pstLIST_NODE new = calloc(sizeof(stLIST_NODE),1);
+	pstLIST_NODE newnode = calloc(sizeof(stLIST_NODE),1);
 	pstLIST_NODE last = NULL;
 
 	last = list_last(list);
 	
-	if(new == NULL)
+	if(newnode == NULL)
 	{
 		return -1;
 	}
 	
 	char *data = strdup(str);
-	new->str = data;
+	newnode->str = data;
 	
 	if(last == NULL)
 	{
-		list->next = new;
+		list->next = newnode;
 	}
 	
 	else
 	{
-		last->next = new;
+		last->next = newnode;
 	}
 	
 	return 0;

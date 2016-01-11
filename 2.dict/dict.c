@@ -13,10 +13,10 @@ pstDICT_NODE new_create()
 }
 
 static int
-dict_insert(struct tagDICT *dict, char *id, char *content)
+dict_insert(struct tagDICT *const dict, const char *id, const char *content)
 {
-	char *p = id;
-	char code;
+	char *p = (char *)id;
+	int code;
 	
  	pstDICT_NODE new = dict->root;
 
@@ -55,10 +55,10 @@ dict_insert(struct tagDICT *dict, char *id, char *content)
 }
 
 static int
-dict_remove(struct tagDICT *dict, char *id)
+dict_remove(struct tagDICT *const dict, const char *id)
 {
-	char *p =id;
-	char code;
+	char *p = (char *)id;
+	int code;
 
 	pstDICT_NODE new = dict->root;
 
@@ -93,10 +93,10 @@ dict_remove(struct tagDICT *dict, char *id)
 }
 
 static ssize_t
-dict_lookup(struct tagDICT *dict, char *id, char *stack, size_t stacklen)
+dict_lookup(struct tagDICT *const dict, const char *id, char *stack, size_t stacklen)
 {
-	char *p = id;
-	char code;
+	char *p = (char *)id;
+	int code;
 	int n = 0;
 
 	pstDICT_NODE new = dict->root;

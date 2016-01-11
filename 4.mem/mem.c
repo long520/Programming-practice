@@ -10,200 +10,165 @@ mem_alloc(struct tagMEM *mem, size_t sz)
 {
 	if(mem == NULL)
 	{
-		return;
+		return NULL;
 	}
 	
-	pstMEM p = mem;
-	Memspace *q = NULL;
-	unsigned int count;
-	
-	if(p->freeHead == NULL)
+	if(sz <= 0)
 	{
-		printf("no space\n");
+		return NULL;
+	}
+	
+	pstmemspace p = mem->first;
+	
+	if(p == NULL)
+	{
+		printf("failed\n");
+		return NULL;
+	}
+	
+	if((p->used == 0) && ((p->block_size) - sz - sizeof(stmemspace) > 0))
+	{
+		pstmemspace q = (pstmemspace)((char *)p->buf + sz);
+		q->buf = (char *)q + sizeof(stmemspace);
+		q->block_size = p->block_size - sz - sizeof(stmemspace);
+		q->next = p->next;
+		
+		if(p->next != NULL)
+		{
+			p->next->prev = q;
+		}
+		
+		p->next = q;
+		q->prev = p;
+		q->used = 0;
+		p->block_size = sz;
+		
+		q->used = 1;
+		return (void *)(p->buf);
 	}
 	
 	else
-	{	
-		q = p->freeHead;
-		p->freeHead = q->pNext;
-		if((sz%(p->spaceSize)) != 0)
-		{
-			count = (sz/(p->spaceSize)) + 1;
-			p->freeCount -= count;
-		}
-		
-		else
-		{
-			count = sz/(p->spaceSize);
-			p->freeCount -= count;
-		}
-		
-		q->pNext = NULL;
-		q->pPrev = p->usedTail;
-		
-		if(p->usedHead == NULL)
-		{
-			p->usedHead = p->usedTail = q;
-		}
-		
-		else
-		{
-			p->usedTail->pNext = q;
-			p->usedTail = q;
-		}
-		
+	{
+		p = p->next;
 	}
-	
-	return q;
-		
 }
 
 static int
 mem_free(struct tagMEM *mem, void *ptr)
 {
-	pstMEM p = mem;  
-	Memspace *q = (Memspace *)ptr;  
-	
-	if(q == NULL)
+	if(mem == NULL)
 	{
 		return -1;
 	}
 	
-	if(q->pPrev == NULL)
+	if(ptr == NULL)
 	{
-		p->usedHead = q->pNext;
-		if(p->usedHead != NULL)
+		return -1;
+	}
+	
+	pstmemspace p = (pstmemspace)((unsigned char *)ptr - sizeof(stmemspace));
+	
+	int num = (unsigned char *)p - (unsigned char *)(mem->first);
+	
+	if(num < 0 || num > mem->size)
+	{
+		return -1;
+	}
+	
+	if(p->used != 1)
+	{
+		printf("memory not used\n");
+		return -1;
+	}
+	
+	p->used = 0;
+	
+	if((p->next != NULL) && (p->next->used == 0))
+	{
+		p->block_size += p->next->block_size + sizeof(stmemspace);
+		pstmemspace q = p->next->next;
+		p->next = q;
+		
+		if(q != NULL)
 		{
-			p->usedHead->pPrev =NULL;
+			q->prev = p;
 		}
 	}
 	
-	if(q->pNext == NULL)
+	if((p->prev != NULL) && (p->prev->used == 0))
 	{
-		p->usedTail = q->pPrev;
-		if(p->usedTail != NULL)
+		p->prev->block_size += p->block_size + sizeof(stmemspace);
+		p->prev->next = p->prev;
+		
+		if(p->next != NULL)
 		{
-			p->usedTail->pNext = NULL;
-			
+			p->next->prev = p->prev;
 		}
+		
+		return 0;
 	}
 	
-	else
-	{
-		q->pPrev->pNext = q->pNext;
-		q->pNext->pPrev = q->pPrev;
-	}
-	
-	q->pPrev = p->freeTail;
-	q->pNext = NULL;
-	
-	p->freeTail->pNext = q;
-	p->freeTail = q;
-	p->freeCount++;
-	
-	return 0;
-	
+	return -1;
 }
 
 static int
 mem_strdup(struct tagMEM *mem, char *str)
 {
-	pstMEM p = calloc(sizeof(stMEM),1);
-	p = mem;
-	if(p->freeHead == NULL)
+	int length;
+	char *buf = NULL;
+	
+	for(length = 0; (length < 255) && (str[length] != '\0'); length++);
+	
+	buf = (char *)mem_alloc(mem,length+sizeof(stmemspace)+1);
+		
+	if(buf != NULL)
 	{
-		printf("free no space\n");
-		return -1;
-	}
-	else
-	{
-		Memspace *q = mem_alloc(p, sizeof(str));
-		q = p->freeHead;
-		p->freeHead = q->pNext;
-		unsigned int count;
-		count = ((sizeof(str))/(p->spaceSize)) + 1;
-		p->freeCount -= count;
-		q->pNext = p->freeHead;
-		q->pPrev = p->usedTail;
-		q->data = str;
-		printf("%s\n",q->data);
-		
-		if(p->usedHead == NULL)
+		for(buf[length--] = 0; length >= 0; length--)
 		{
-			p->usedHead = p->usedTail = q;
+			buf[length] = str[length];
 		}
-		
-		else
-		{
-			p->usedTail->pNext = q;
-			p->usedTail = q;
-		}
-		
+		printf("%s\n",buf);
 	}
 	
 	return 0;
-	
 }
 
 
 pstMEM
 MEM_create(void *buf, size_t sz)
 {
-	pstMEM p = calloc(sizeof(stMEM),1);
+	pstmemspace p = (pstmemspace)((unsigned char *)buf + sizeof(stMEM));
 	
-	p = buf;
-	p->spaceSize = 1024;
-	if((sz%p->spaceSize) != 0)
-	{
-		p->spaceCount = (sz/p->spaceSize) + 1;
-	}
+	p->block_size = sz - sizeof(stMEM);
+	p->buf = (char *)p + sizeof(stmemspace);
+	p->prev = p->next = NULL;
+	p->used = 0;
 	
-	else
-	{
-		p->spaceCount = sz/(p->spaceSize);
-	}
+	((pstMEM)buf)->alloc = mem_alloc;
+	((pstMEM)buf)->free = mem_free;
+	((pstMEM)buf)->strdup = mem_strdup;
 	
-	p->freeCount = p->spaceCount;
-	p->usedHead = p->usedTail = NULL;
-	p->freeHead = p->freeTail = NULL;
+	((pstMEM)buf)->size = sz;
 	
-	Memspace *q = NULL;
-	p->first = (char *)malloc(sizeof(Memspace) * (p->spaceCount));
-	int i;
-	for(i = 0; i < (p->spaceCount); i++)
-	{
-		q = (Memspace *)(p->first + sizeof(Memspace) * i);
-		q->pNext = NULL;
-		q->pPrev = p->freeTail;
-		
-		if(p->freeHead == NULL)
-		{
-			p->freeHead = p->freeTail = q;
-		}
-		
-		else
-		{
-			p->freeTail->pNext = q;
-			p->freeTail = q;
-		}
-	}
+	((pstMEM)buf)->first = p;
 	
-	p->alloc = mem_alloc;
-	p->free = mem_free;
-	p->strdup = mem_strdup;
+	return ((pstMEM)buf);
 	
-	return p;
 }
 
-tVOID
+void
 MEM_release(pstMEM *mem)
 {
+	int i = 0;
 	
-	pstMEM p = (pstMEM)calloc(sizeof(stMEM),1);
-	p = mem;
-	free(p->first);
-
-	free(p);
+	unsigned char *p = (unsigned char *)(*mem);
+	
+	for(i=0;i < (*mem)->size; i++)
+	{
+		p[i] = 0;
+	}
+	
+	*mem = NULL;
 }
 
 

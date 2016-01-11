@@ -16,14 +16,15 @@
 extern "C" {
 #endif
 
-typedef void tVOID;
 
 typedef struct memspace  
 {  
-struct memspace *pNext;   
-struct memspace *pPrev;  
-char* data;  
-} Memspace;
+	struct memspace *next;   
+	struct memspace *prev;  
+	void *buf;
+	int used;
+	int block_size;
+} stmemspace, *pstmemspace;
 
 
 typedef struct tagMEM
@@ -49,15 +50,9 @@ typedef struct tagMEM
 	int
 	(*strdup)(struct tagMEM *mem, char *str);
 
-	 
-	unsigned int spaceCount;
-	unsigned int spaceSize;
-	unsigned int freeCount;  
-	Memspace *freeHead;  
-	Memspace *freeTail; 
-	Memspace *usedHead;   
-	Memspace *usedTail;
-	char *first;
+	size_t size;
+	
+	struct memspace *first;
 
 }stMEM, *pstMEM;
 
@@ -75,7 +70,7 @@ MEM_create(void *buf, size_t sz);
  * 释放内存分配器。
  *
  */
-extern tVOID
+extern void
 MEM_release(pstMEM *mem);
 
 
